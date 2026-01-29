@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Личный редактор расписания (JSON)</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --panel:#111827;
+      --panel2:#0f172a;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --border:#1f2937;
+      --accent:#22c55e;
+      --danger:#ef4444;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+      background: radial-gradient(1200px 700px at 50% -10%, #111827 0%, var(--bg) 50%, var(--bg) 100%);
+      color:var(--text);
+    }
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 14px; padding-bottom: 40px; }
+    .top{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      padding: 8px 2px 14px;
+    }
+    .brand{display:flex; flex-direction:column; gap:3px;}
+    .title{font-size:18px; font-weight:800;}
+    .sub{font-size:12px; color:var(--muted); line-height:1.25;}
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .grid{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 12px;
+    }
+    @media (max-width: 860px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    .btn{
+      border:1px solid var(--border);
+      background: rgba(17,24,39,.55);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 999px;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn.primary{
+      border-color: rgba(34,197,94,.35);
+      background: rgba(34,197,94,.12);
+    }
+    .btn.danger{
+      border-color: rgba(239,68,68,.35);
+      background: rgba(239,68,68,.12);
+    }
+    select, input{
+      border:1px solid var(--border);
+      background: rgba(17,24,39,.55);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size:13px;
+      font-weight:650;
+      outline: none;
+    }
+    input[type="text"]{ width: 100%; }
+    .status{margin-top:10px; font-size:12px; color:var(--muted);}
+
+    .list{
+      display:flex; flex-direction:column; gap:8px;
+      max-height: 62vh; overflow:auto; padding-right: 4px;
+    }
+    .item{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding: 10px 12px;
+      border:1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(15,23,42,.45);
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .item.active{
+      border-color: rgba(34,197,94,.35);
+      background: rgba(34,197,94,.10);
+    }
+    .item .name{ font-weight:800; }
+    .item .meta{ font-size:12px; color:var(--muted); }
+
+    .sec-title{
+      font-size:12px; color:var(--muted);
+      margin: 0 0 10px;
+      text-transform: uppercase;
+      letter-spacing: .9px;
+    }
+    .h2{ font-size:16px; font-weight:900; margin:0 0 10px; }
+    .divider{ height:1px; background: var(--border); margin: 12px 0; border-radius: 999px; }
+
+    .box{
+      border:1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(17,24,39,.35);
+    }
+    .dir-head{
+      display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+    }
+    .small{ font-size:12px; color:var(--muted); }
+    .times{
+      margin-top: 10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .time-pill{
+      display:flex; align-items:center; gap:8px;
+      border:1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 10px;
+      background: rgba(0,0,0,.18);
+    }
+    .time-pill input{
+      width: 78px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+    }
+    .time-pill input.bad{ border-color: rgba(239,68,68,.55); }
+    .icon{
+      width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center;
+      border-radius:999px; border:1px solid var(--border);
+      background: rgba(17,24,39,.35);
+      cursor:pointer;
+      font-weight:900;
+    }
+    .icon:active{ transform: translateY(1px); }
+
+    .hint{
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .kbd{
+      display:inline-block;
+      padding: 2px 7px;
+      border:1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(15,23,42,.65);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="title">Личный редактор расписания</div>
+        <div class="sub">Импорт JSON → правка времени → скачай JSON → залей в GitHub (замени файл в <span class="kbd">data/</span>)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <label class="btn" for="fileInput" style="cursor:pointer;">Импорт JSON</label>
+        <input id="fileInput" type="file" accept="application/json" style="display:none;" />
+
+        <select id="mode">
+          <option value="auto">Авто (распознать)</option>
+          <option value="internal">Внутренние (routes[].directions[].lines[])</option>
+          <option value="external">Внешние (routes[].trips[].times[])</option>
+        </select>
+
+        <button class="btn primary" id="btnDownload" type="button">Скачать JSON</button>
+        <button class="btn" id="btnValidate" type="button">Проверить</button>
+      </div>
+      <div class="status" id="status">Импортируй JSON, чтобы начать.</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="sec-title">Маршруты</div>
+        <div class="row" style="margin-bottom:10px;">
+          <button class="btn" id="btnAddRoute" type="button">+ Маршрут</button>
+          <button class="btn danger" id="btnDelRoute" type="button">Удалить</button>
+        </div>
+        <div class="list" id="routesList"></div>
+        <div class="hint">Подсказка: выбери маршрут слева, правь данные справа.</div>
+      </div>
+
+      <div class="card" id="editorCard">
+        <div class="sec-title">Редактор</div>
+        <div class="h2" id="routeHeader">Маршрут не выбран</div>
+        <div id="editorBody" class="small">Импортируй JSON и выбери маршрут.</div>
+      </div>
+    </div>
+
+    <div class="hint">
+      Формат времени: <span class="kbd">HH:MM</span> (например <span class="kbd">07:30</span>). Невалидные времена подсвечиваются красным.
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (s, r=document) => r.querySelector(s);
+
+  const statusEl = $("#status");
+  const fileInput = $("#fileInput");
+  const modeSel = $("#mode");
+
+  const routesList = $("#routesList");
+  const routeHeader = $("#routeHeader");
+  const editorBody = $("#editorBody");
+
+  const btnDownload = $("#btnDownload");
+  const btnValidate = $("#btnValidate");
+  const btnAddRoute = $("#btnAddRoute");
+  const btnDelRoute = $("#btnDelRoute");
+
+  const state = {
+    filename: "schedule.json",
+    data: null,
+    schema: "internal", // internal | external
+    activeIdx: -1
+  };
+
+  function setStatus(text, isError=false){
+    statusEl.textContent = text;
+    statusEl.style.color = isError ? "var(--danger)" : "var(--muted)";
+  }
+
+  function isValidTime(t){
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
+    if (!m) return false;
+    const hh = +m[1], mm = +m[2];
+    return hh>=0 && hh<=23 && mm>=0 && mm<=59;
+  }
+
+  function normalizeTime(t){
+    const s = String(t||"").trim();
+    const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+    if (!m) return s;
+    return String(m[1]).padStart(2,"0")+":"+m[2];
+  }
+
+  function detectSchema(data){
+    const r0 = data?.routes?.[0];
+    if (!r0) return "internal";
+    if (Array.isArray(r0.directions)) return "internal";
+    if (Array.isArray(r0.trips)) return "external";
+    return "internal";
+  }
+
+  function ensureBase(){
+    if (!state.data) state.data = { routes: [] };
+    if (!Array.isArray(state.data.routes)) state.data.routes = [];
+  }
+
+  function renderRouteList(){
+    ensureBase();
+    routesList.innerHTML = "";
+
+    state.data.routes.forEach((r, idx) => {
+      const div = document.createElement("div");
+      div.className = "item" + (idx===state.activeIdx ? " active" : "");
+      const name = state.schema === "internal"
+        ? (String(r.id ?? "").trim() ? `№${r.id}` : "Без номера")
+        : (String(r.title ?? r.name ?? "").trim() || "Без названия");
+
+      const meta = state.schema === "internal"
+        ? (String(r.days ?? "daily"))
+        : (`рейсов: ${Array.isArray(r.trips) ? r.trips.length : 0}`);
+
+      div.innerHTML = `<div>
+        <div class="name">${escapeHtml(name)}</div>
+        <div class="meta">${escapeHtml(meta)}</div>
+      </div>
+      <div class="meta">›</div>`;
+
+      div.addEventListener("click", () => {
+        state.activeIdx = idx;
+        renderRouteList();
+        renderEditor();
+      });
+
+      routesList.appendChild(div);
+    });
+
+    if (state.activeIdx < 0 && state.data.routes.length){
+      state.activeIdx = 0;
+      renderRouteList();
+      renderEditor();
+    }
+  }
+
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function renderEditor(){
+    ensureBase();
+    const r = state.data.routes[state.activeIdx];
+    if (!r){
+      routeHeader.textContent = "Маршрут не выбран";
+      editorBody.innerHTML = `<div class="small">Выбери маршрут слева.</div>`;
+      return;
+    }
+
+    if (state.schema === "internal") renderInternalEditor(r);
+    else renderExternalEditor(r);
+  }
+
+  function renderInternalEditor(route){
+    routeHeader.textContent = `Маршрут №${String(route.id ?? "").trim() || "—"}`;
+
+    const days = String(route.days ?? "daily");
+    const dirs = Array.isArray(route.directions) ? route.directions : (route.directions = []);
+
+    editorBody.innerHTML = `
+      <div class="box">
+        <div class="row" style="margin-bottom:10px;">
+          <div style="flex:1; min-width:160px;">
+            <div class="small">Номер (id)</div>
+            <input id="routeId" type="text" value="${escapeHtml(route.id ?? "")}" placeholder="Напр. 1" />
+          </div>
+
+          <div style="flex:1; min-width:180px;">
+            <div class="small">Дни</div>
+            <select id="routeDays">
+              <option value="daily">daily (Ежедн.)</option>
+              <option value="weekdays">weekdays (Пн-Пт)</option>
+              <option value="weekend">weekend (Сб-Вс)</option>
+              <option value="sat">sat (Суббота)</option>
+              <option value="sun">sun (Воскресенье)</option>
+            </select>
+          </div>
+
+          <button class="btn" id="btnAddDir" type="button">+ Направление</button>
+        </div>
+
+        <div class="hint">Направление = колонка в модальном окне. Времена вводи по одному.</div>
+      </div>
+
+      <div class="divider"></div>
+      <div id="dirsHost"></div>
+    `;
+
+    const routeId = $("#routeId");
+    const routeDays = $("#routeDays");
+    routeDays.value = ["daily","weekdays","weekend","sat","sun"].includes(days) ? days : "daily";
+
+    routeId.addEventListener("input", () => {
+      route.id = routeId.value.trim();
+      renderRouteList();
+      renderEditor();
+    });
+
+    routeDays.addEventListener("change", () => {
+      route.days = routeDays.value;
+      renderRouteList();
+    });
+
+    $("#btnAddDir").addEventListener("click", () => {
+      dirs.push({ label: "Новое направление", lines: [] });
+      renderEditor();
+    });
+
+    const dirsHost = $("#dirsHost");
+    dirsHost.innerHTML = "";
+
+    dirs.forEach((d, dIdx) => {
+      const box = document.createElement("div");
+      box.className = "box";
+      box.style.marginBottom = "10px";
+
+      const lines = Array.isArray(d.lines) ? d.lines : (d.lines = []);
+
+      box.innerHTML = `
+        <div class="dir-head">
+          <div style="flex:1; min-width:180px;">
+            <div class="small">Название направления</div>
+            <input type="text" data-k="label" value="${escapeHtml(d.label ?? "")}" placeholder="Напр. КПП 1 (тит.112)" />
+          </div>
+
+          <div class="row">
+            <button class="btn" data-act="addTime" type="button">+ Время</button>
+            <button class="btn" data-act="sort" type="button">Сортировать</button>
+            <button class="btn danger" data-act="delDir" type="button">Удалить</button>
+          </div>
+        </div>
+
+        <div class="times" data-times></div>
+      `;
+
+      const labelInput = box.querySelector('input[data-k="label"]');
+      labelInput.addEventListener("input", () => {
+        d.label = labelInput.value;
+      });
+
+      box.querySelector('[data-act="addTime"]').addEventListener("click", () => {
+        lines.push("07:00");
+        renderEditor();
+      });
+
+      box.querySelector('[data-act="sort"]').addEventListener("click", () => {
+        lines.sort((a,b) => toMin(a) - toMin(b));
+        renderEditor();
+      });
+
+      box.querySelector('[data-act="delDir"]').addEventListener("click", () => {
+        dirs.splice(dIdx, 1);
+        renderEditor();
+      });
+
+      const timesHost = box.querySelector("[data-times]");
+      lines.forEach((t, tIdx) => {
+        const pill = document.createElement("div");
+        pill.className = "time-pill";
+
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.value = normalizeTime(t);
+        inp.placeholder = "HH:MM";
+        if (!isValidTime(inp.value)) inp.classList.add("bad");
+
+        inp.addEventListener("input", () => {
+          lines[tIdx] = inp.value.trim();
+          inp.classList.toggle("bad", !isValidTime(inp.value));
+        });
+
+        const del = document.createElement("div");
+        del.className = "icon";
+        del.title = "Удалить";
+        del.textContent = "×";
+        del.addEventListener("click", () => {
+          lines.splice(tIdx, 1);
+          renderEditor();
+        });
+
+        pill.appendChild(inp);
+        pill.appendChild(del);
+        timesHost.appendChild(pill);
+      });
+
+      dirsHost.appendChild(box);
+    });
+
+    setStatus("Готово к редактированию (внутренние).");
+  }
+
+  function renderExternalEditor(route){
+    routeHeader.textContent = String(route.title ?? route.name ?? "Направление");
+
+    const trips = Array.isArray(route.trips) ? route.trips : (route.trips = []);
+
+    editorBody.innerHTML = `
+      <div class="box">
+        <div class="row" style="margin-bottom:10px;">
+          <div style="flex:1; min-width:180px;">
+            <div class="small">Название направления</div>
+            <input id="extTitle" type="text" value="${escapeHtml(route.title ?? "")}" placeholder="Напр. ТАНЕКО 1" />
+          </div>
+          <button class="btn" id="btnAddTrip" type="button">+ Рейс</button>
+        </div>
+        <div class="hint">Рейс = блок с временем(ами) и описанием.</div>
+      </div>
+
+      <div class="divider"></div>
+      <div id="tripsHost"></div>
+    `;
+
+    $("#extTitle").addEventListener("input", (e) => {
+      route.title = e.target.value;
+      renderRouteList();
+      renderEditor();
+    });
+
+    $("#btnAddTrip").addEventListener("click", () => {
+      trips.push({ timeText: "07:00", times: ["07:00"], desc: "" });
+      renderEditor();
+    });
+
+    const host = $("#tripsHost");
+    host.innerHTML = "";
+
+    trips.forEach((tr, idx) => {
+      const box = document.createElement("div");
+      box.className = "box";
+      box.style.marginBottom = "10px";
+
+      const times = Array.isArray(tr.times) ? tr.times : (tr.times = []);
+      box.innerHTML = `
+        <div class="dir-head">
+          <div style="flex:1; min-width:180px;">
+            <div class="small">Заголовок рейса (timeText)</div>
+            <input type="text" data-k="timeText" value="${escapeHtml(tr.timeText ?? "")}" placeholder="Напр. 07:00" />
+          </div>
+          <div class="row">
+            <button class="btn" data-act="addTime" type="button">+ Время</button>
+            <button class="btn danger" data-act="delTrip" type="button">Удалить</button>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="small">Описание (desc)</div>
+          <input type="text" data-k="desc" value="${escapeHtml(tr.desc ?? "")}" placeholder="Любое описание (опционально)" />
+        </div>
+
+        <div class="times" data-times></div>
+      `;
+
+      box.querySelector('input[data-k="timeText"]').addEventListener("input", (e) => {
+        tr.timeText = e.target.value.trim();
+      });
+      box.querySelector('input[data-k="desc"]').addEventListener("input", (e) => {
+        tr.desc = e.target.value;
+      });
+
+      box.querySelector('[data-act="addTime"]').addEventListener("click", () => {
+        times.push("07:00");
+        renderEditor();
+      });
+
+      box.querySelector('[data-act="delTrip"]').addEventListener("click", () => {
+        trips.splice(idx, 1);
+        renderEditor();
+      });
+
+      const timesHost = box.querySelector("[data-times]");
+      times.forEach((t, tIdx) => {
+        const pill = document.createElement("div");
+        pill.className = "time-pill";
+
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.value = normalizeTime(t);
+        inp.placeholder = "HH:MM";
+        if (!isValidTime(inp.value)) inp.classList.add("bad");
+
+        inp.addEventListener("input", () => {
+          times[tIdx] = inp.value.trim();
+          inp.classList.toggle("bad", !isValidTime(inp.value));
+        });
+
+        const del = document.createElement("div");
+        del.className = "icon";
+        del.title = "Удалить";
+        del.textContent = "×";
+        del.addEventListener("click", () => {
+          times.splice(tIdx, 1);
+          renderEditor();
+        });
+
+        pill.appendChild(inp);
+        pill.appendChild(del);
+        timesHost.appendChild(pill);
+      });
+
+      host.appendChild(box);
+    });
+
+    setStatus("Готово к редактированию (внешние).");
+  }
+
+  function toMin(t){
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
+    if (!m) return 10**9;
+    return (+m[1])*60 + (+m[2]);
+  }
+
+  function validateAll(){
+    ensureBase();
+    let bad = 0;
+
+    if (state.schema === "internal"){
+      for (const r of state.data.routes){
+        const dirs = Array.isArray(r.directions) ? r.directions : [];
+        for (const d of dirs){
+          const lines = Array.isArray(d.lines) ? d.lines : [];
+          for (const t of lines) if (!isValidTime(t)) bad++;
+        }
+      }
+    } else {
+      for (const r of state.data.routes){
+        const trips = Array.isArray(r.trips) ? r.trips : [];
+        for (const tr of trips){
+          const times = Array.isArray(tr.times) ? tr.times : [];
+          for (const t of times) if (!isValidTime(t)) bad++;
+        }
+      }
+    }
+
+    if (bad) setStatus(`Проверка: найдено невалидных времен: ${bad}. Исправь подсвеченные поля.`, true);
+    else setStatus("Проверка: всё ок ✅");
+    return bad === 0;
+  }
+
+  function downloadJson(){
+    if (!state.data) { setStatus("Сначала импортируй JSON.", true); return; }
+    if (!validateAll()) return;
+
+    const blob = new Blob([JSON.stringify(state.data, null, 2)], {type:"application/json;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+
+    // сохранить исходное имя, если было
+    a.download = state.filename || (state.schema === "internal" ? "internal.json" : "external.json");
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    setStatus("JSON скачан. Заменяй файл в репозитории и пушь на GitHub.");
+  }
+
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try{
+      const txt = await file.text();
+      const obj = JSON.parse(txt);
+
+      state.filename = file.name || "schedule.json";
+      state.data = obj;
+
+      const forced = modeSel.value;
+      state.schema = forced === "auto" ? detectSchema(obj) : forced;
+
+      state.activeIdx = -1;
+
+      setStatus(`Импорт: ${state.filename} • режим: ${state.schema}`);
+      renderRouteList();
+      renderEditor();
+    }catch(err){
+      setStatus("Ошибка импорта: " + (err.message || err), true);
+    }finally{
+      fileInput.value = "";
+    }
+  });
+
+  modeSel.addEventListener("change", () => {
+    if (!state.data) return;
+    state.schema = modeSel.value === "auto" ? detectSchema(state.data) : modeSel.value;
+    state.activeIdx = -1;
+    setStatus(`Режим: ${state.schema}`);
+    renderRouteList();
+    renderEditor();
+  });
+
+  btnValidate.addEventListener("click", validateAll);
+  btnDownload.addEventListener("click", downloadJson);
+
+  btnAddRoute.addEventListener("click", () => {
+    ensureBase();
+    if (state.schema === "internal"){
+      state.data.routes.push({
+        id: "",
+        days: "daily",
+        directions: [
+          { label: "КПП 1 (тит.112)", lines: [] },
+          { label: "тит.088/2", lines: [] }
+        ]
+      });
+    } else {
+      state.data.routes.push({
+        title: "Новое направление",
+        trips: [{ timeText: "07:00", times: ["07:00"], desc: "" }]
+      });
+    }
+    state.activeIdx = state.data.routes.length - 1;
+    renderRouteList();
+    renderEditor();
+    setStatus("Маршрут добавлен.");
+  });
+
+  btnDelRoute.addEventListener("click", () => {
+    ensureBase();
+    if (state.activeIdx < 0) return;
+    state.data.routes.splice(state.activeIdx, 1);
+    state.activeIdx = Math.min(state.activeIdx, state.data.routes.length - 1);
+    renderRouteList();
+    renderEditor();
+    setStatus("Маршрут удалён.");
+  });
+
+})();
+</script>
+</body>
+</html>
