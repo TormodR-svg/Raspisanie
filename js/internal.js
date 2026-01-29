@@ -1,4 +1,8 @@
-import { qs, getMoscowNow, pickWindow, routeNextCountdown, formatDirectionLabel, daysLabel, initDrawer, iconMenuSvg } from "./utils.js";
+import { qs, getMoscowNow, pickWindow, formatDirectionLabel, daysLabel, initDrawer, iconMenuSvg } from "./utils.js";
+
+let DATA = null;
+let MODAL = null;
+let TIMER = null;
 
 async function loadData(){
   const res = await fetch("./data/internal.json", { cache: "no-store" });
@@ -41,7 +45,6 @@ function setupModal(){
   }
 
   function openForRoute(route){
-    // title like screenshot
     const id = String(route?.id ?? "").trim() || "";
     titleEl.textContent = id ? `Расписание автобуса №${id}` : (String(route?.title ?? "Расписание"));
     subEl.textContent = daysLabelLong(route?.days);
@@ -72,7 +75,6 @@ function setupModal(){
       const ca = document.createElement("div");
       ca.className = "cell" + (aTimes[i] ? "" : " muted");
       ca.textContent = timeDisplay(aTimes[i]);
-
       row.appendChild(ca);
 
       if (twoCols){
@@ -155,16 +157,30 @@ function makeCard(route, nowMin, mskDay, modalApi){
 
   right.appendChild(dirsWrap);
 
-  
-
   card.appendChild(left);
   card.appendChild(right);
 
   const open = () => modalApi.openForRoute(route);
   card.addEventListener("click", open);
-  card.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") open(); });
+  card.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") open();
+  });
 
   return card;
+}
+
+function render(){
+  const host = qs("#list");
+  if (!DATA || !MODAL || !host) return;
+
+  const now = getMoscowNow();
+  const nowMin = now.hour * 60 + now.minute;
+
+  host.innerHTML = "";
+  const routes = (DATA.routes || []).filter(r => String(r?.id ?? "").trim() !== "");
+  for (const route of routes) {
+    host.appendChild(makeCard(route, nowMin, now.day, MODAL));
+  }
 }
 
 async function main(){
@@ -172,23 +188,25 @@ async function main(){
   const btn = qs("#menuBtn");
   if (btn) btn.innerHTML = iconMenuSvg();
 
-  const modalApi = setupModal();
+  MODAL = setupModal();
 
   const host = qs("#list");
   host.innerHTML = `<div class="center-note">Загрузка…</div>`;
 
-  const data = await loadData();
-  const now = getMoscowNow();
-  const nowMin = now.hour * 60 + now.minute;
+  DATA = await loadData();
+  render();
 
-  host.innerHTML = "";
-  const routes = (data.routes || []).filter(r => String(r?.id ?? "").trim() !== "");
-  for (const route of routes) {
-    host.appendChild(makeCard(route, nowMin, now.day, modalApi));
-  }
+  // ✅ авто-обновление (время в карточках “переедет”, когда рейс прошёл)
+  if (TIMER) clearInterval(TIMER);
+  TIMER = setInterval(render, 60_000);
+
+  // ✅ когда вернулся на вкладку — сразу обновить
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) render();
+  });
 }
 
 main().catch(err => {
   const host = qs("#list");
-  host.innerHTML = `<div class="center-note">${String(err.message || err)}</div>`;
+  if (host) host.innerHTML = `<div class="center-note">${String(err.message || err)}</div>`;
 });
